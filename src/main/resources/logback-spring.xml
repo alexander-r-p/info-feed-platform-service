@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration >
+    <include resource="org/springframework/boot/logging/logback/base.xml"/>
+    
+    <!--disable logback status INFO at the start-->
+    <statusListener class="ch.qos.logback.core.status.NopStatusListener"/>
+    <property name="msg_pattern" value="[%-5level] %d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %C{1} - %msg%n"/>
+    <property name="log_path" value="./platform-log"/>
+        
+    <springProperty scope="context" name="grayloghost" source="graylog.host"
+                    defaultValue="localhost"/>
+    <springProperty scope="context" name="graylogport" source="graylog.port"
+                    defaultValue="12201"/>
+    <springProperty scope="context" name="graylogenabled" source="graylog.enabled"
+                    defaultValue="true"/>
+
+    <appender name="console" class="ch.qos.logback.core.ConsoleAppender">
+        <layout class="ch.qos.logback.classic.PatternLayout">
+            <Pattern>${msg_pattern}</Pattern>
+        </layout>
+    </appender>
+
+    <appender name="ROLLING-FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <encoder>
+            <pattern>${msg_pattern}</pattern>
+        </encoder>
+
+        <filter class="ch.qos.logback.classic.filter.LevelFilter">
+            <level>ERROR</level>
+            <onMatch>ACCEPT</onMatch>
+        </filter>
+        <filter class="ch.qos.logback.classic.filter.LevelFilter">
+            <level>INFO</level>
+            <onMatch>ACCEPT</onMatch>
+        </filter>
+
+        <file>${log_path}/log.log</file>
+        <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+            <fileNamePattern>${log_path}/archived/log.%d{yyyy-MM-dd}.%i.gz</fileNamePattern>
+            <maxFileSize>100MB</maxFileSize>
+            <maxHistory>60</maxHistory>
+            <totalSizeCap>1GB</totalSizeCap>
+        </rollingPolicy>
+    </appender>
+    
+
+    
+    <appender name="GELF" class="de.siegmar.logbackgelf.GelfTcpAppender">
+        <graylogHost>${grayloghost}</graylogHost>
+        <graylogPort>${graylogport}</graylogPort>
+        <connectTimeout>15000</connectTimeout>
+        <reconnectInterval>300</reconnectInterval>
+        <maxRetries>2</maxRetries>
+        <retryDelay>3000</retryDelay>
+        <poolSize>2</poolSize>
+        <poolMaxWaitTime>5000</poolMaxWaitTime>
+        <layout class="de.siegmar.logbackgelf.GelfLayout">
+            <originHost>${grayloghost}</originHost>
+            <includeRawMessage>false</includeRawMessage>
+            <includeMarker>true</includeMarker>
+            <includeMdcData>true</includeMdcData>
+            <includeCallerData>false</includeCallerData>
+            <includeRootCauseData>true</includeRootCauseData>
+            <includeLevelName>true</includeLevelName>
+            <shortPatternLayout class="ch.qos.logback.classic.PatternLayout">
+                <pattern>%m%nopex</pattern>
+            </shortPatternLayout>
+            <fullPatternLayout class="ch.qos.logback.classic.PatternLayout">
+                <pattern>%m</pattern>
+            </fullPatternLayout>
+            <staticField>app_name:api-gateway</staticField>
+            <staticField>os_arch:${os.arch}</staticField>
+            <staticField>os_name:${os.name}</staticField>
+            <staticField>os_version:${os.version}</staticField>
+        </layout>
+    </appender>
+    
+    <appender name="ASYNC_GELF" class="ch.qos.logback.classic.AsyncAppender">
+        <appender-ref ref="GELF" />
+    </appender>
+
+    <if condition='property("graylogenabled").equals("true")'>
+        <then>
+            <root level='INFO'>
+                <appender-ref ref="console"/>
+                <appender-ref ref="ROLLING-FILE"/>
+                <!-- <appender-ref ref="ASYNC_GELF"/> -->
+            </root>
+        </then>
+        <else>   
+            <root level='INFO'>
+                <appender-ref ref="console"/>
+            </root>
+        </else>
+    </if>
+</configuration>
