@@ -2,9 +2,16 @@ application:
   version: @project.version@
   description: @project.description@
 
+---
 spring:
+  profiles: dev
   data:
     mongodb:
-      host: ${MONGO_HOST:localhost}
-      port: ${MONGO_PORT:27017}
-      database: ${MONGO_DB:articles}
+      uri: mongodb://localhost:27017/articles
+
+---
+spring:
+  profiles: staging
+  data:
+    mongodb:
+      uri: mongodb://heroku_2wfkp8fj:ur54hhiar42eqh95uj3a63n6e@ds245218.mlab.com:45218/heroku_2wfkp8fj
